@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock Volatility Analyzer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .chart-container {
+      position: relative;
+      margin: auto;
+      height: 400px;
+      width: 80%;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 p-4">
+  <div class="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md">
+    <h1 class="text-2xl font-bold mb-4">Stock Volatility Analyzer</h1>
+    <div class="flex space-x-2 mb-4">
+      <button id="homeBtn" class="bg-blue-500 text-white px-4 py-2 rounded">Home</button>
+      <button id="prevBtn" class="bg-gray-500 text-white px-4 py-2 rounded">←</button>
+      <button id="nextBtn" class="bg-gray-500 text-white px-4 py-2 rounded">→</button>
+      <input id="stockInput" type="text" placeholder="Enter stock ticker (e.g., AAPL)" class="border p-2 rounded flex-grow">
+      <button id="searchBtn" class="bg-green-500 text-white px-4 py-2 rounded">Search</button>
+      <button id="saveBtn" class="bg-yellow-500 text-white px-4 py-2 rounded">Save</button>
+    </div>
+    <div class="chart-container">
+      <canvas id="volatilityChart"></canvas>
+    </div>
+    <div id="forecastContainer" class="chart-container mt-4">
+      <canvas id="forecastChart"></canvas>
+    </div>
+    <p id="status" class="mt-2 text-red-500"></p>
+  </div>
+
+  <script>
+    let currentStock = 'AAPL';
+    const ctx = document.getElementById('volatilityChart').getContext('2d');
+    const forecastCtx = document.getElementById('forecastChart').getContext('2d');
+    let volatilityChart, forecastChart;
+
+    function fetchStockData(ticker) {
+      document.getElementById('status').textContent = 'Loading...';
+      fetch(`http://127.0.0.1:5000/stock/${ticker}`)
+        .then(response => {
+          if (!response.ok) {
+            console.log('Response status:', response.status, response.statusText);
+            throw new Error(`Stock data unavailable: ${response.statusText}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          document.getElementById('status').textContent = '';
+          if (volatilityChart) volatilityChart.destroy();
+          if (forecastChart) forecastChart.destroy();
+
+          volatilityChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: data.dates,
+              datasets: [
+                { label: `${ticker} Returns (%)`, data: data.returns, borderColor: 'blue', fill: false },
+                { label: `${ticker} Volatility`, data: data.volatility, borderColor: 'red', fill: false }
+              ]
+            },
+            options: { responsive: true, scales: { y: { beginAtZero: true } } }
+          });
+
+          forecastChart = new Chart(forecastCtx, {
+            type: 'line',
+            data: {
+              labels: data.forecast_dates,
+              datasets: [{ label: `${ticker} Forecasted Volatility`, data: data.forecast_values, borderColor: 'green', fill: false }]
+            },
+            options: { responsive: true, scales: { y: { beginAtZero: true } } }
+          });
+          currentStock = ticker;
+        })
+        .catch(error => {
+          console.error('Fetch error:', error);
+          document.getElementById('status').textContent = `Error: ${error.message}`;
+          if (volatilityChart) volatilityChart.destroy();
+          if (forecastChart) forecastChart.destroy();
+        });
+    }
+
+    // Event listeners
+    document.getElementById('homeBtn').addEventListener('click', () => fetchStockData('AAPL'));
+    document.getElementById('prevBtn').addEventListener('click', () => console.log('Previous stock - implement stock list cycling'));
+    document.getElementById('nextBtn').addEventListener('click', () => console.log('Next stock - implement stock list cycling'));
+    document.getElementById('searchBtn').addEventListener('click', () => {
+      const ticker = document.getElementById('stockInput').value.toUpperCase().trim();
+      if (ticker) fetchStockData(ticker);
+    });
+    document.getElementById('saveBtn').addEventListener('click', () => {
+      if (volatilityChart) {
+        const link = document.createElement('a');
+        link.download = `${currentStock}_volatility.png`;
+        link.href = volatilityChart.toBase64Image();
+        link.click();
+      } else {
+        document.getElementById('status').textContent = 'No chart to save.';
+      }
+    });
+
+    // Initial load
+    window.onload = () => {
+      console.log('Page loaded, fetching initial stock:', currentStock);
+      fetchStockData(currentStock);
+    };
+  </script>
+</body>
+</html>
