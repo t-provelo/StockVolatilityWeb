@@ -52,29 +52,80 @@
           return response.json();
         })
         .then(data => {
+          console.log('Received data:', data); // Debug log
           document.getElementById('status').textContent = '';
           if (volatilityChart) volatilityChart.destroy();
           if (forecastChart) forecastChart.destroy();
+
+          // Check if returns data exists and is valid
+          if (!data.returns || data.returns.length === 0) {
+            console.error('No returns data available:', data.returns);
+            document.getElementById('status').textContent = 'No returns data to display.';
+            return;
+          }
 
           volatilityChart = new Chart(ctx, {
             type: 'line',
             data: {
               labels: data.dates,
               datasets: [
-                { label: `${ticker} Returns (%)`, data: data.returns, borderColor: 'blue', fill: false },
-                { label: `${ticker} Volatility`, data: data.volatility, borderColor: 'red', fill: false }
+                { 
+                  label: `${ticker} Returns (%)`, 
+                  data: data.returns, 
+                  borderColor: 'blue', 
+                  fill: false,
+                  pointRadius: 1, // Make points visible for debugging
+                  tension: 0.1 // Smooth the line slightly
+                },
+                { 
+                  label: `${ticker} Volatility`, 
+                  data: data.volatility, 
+                  borderColor: 'red', 
+                  fill: false,
+                  pointRadius: 1
+                }
               ]
             },
-            options: { responsive: true, scales: { y: { beginAtZero: true } } }
+            options: {
+              responsive: true,
+              scales: {
+                x: {
+                  title: { display: true, text: 'Date' },
+                  ticks: { maxTicksLimit: 12 } // Approx. monthly labels
+                },
+                y: { 
+                  beginAtZero: true, 
+                  title: { display: true, text: 'Percentage (%)' } 
+                }
+              }
+            }
           });
 
           forecastChart = new Chart(forecastCtx, {
             type: 'line',
             data: {
               labels: data.forecast_dates,
-              datasets: [{ label: `${ticker} Forecasted Volatility`, data: data.forecast_values, borderColor: 'green', fill: false }]
+              datasets: [{ 
+                label: `${ticker} Forecasted Volatility`, 
+                data: data.forecast_values, 
+                borderColor: 'green', 
+                fill: false,
+                pointRadius: 1
+              }]
             },
-            options: { responsive: true, scales: { y: { beginAtZero: true } } }
+            options: {
+              responsive: true,
+              scales: {
+                x: {
+                  title: { display: true, text: 'Date' },
+                  ticks: { maxTicksLimit: 5 } // One per forecast day
+                },
+                y: { 
+                  beginAtZero: true, 
+                  title: { display: true, text: 'Percentage (%)' } 
+                }
+              }
+            }
           });
           currentStock = ticker;
         })

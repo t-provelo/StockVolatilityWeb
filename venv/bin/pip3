@@ -1,4 +1,4 @@
-#!/Users/spencer-campbell/Desktop/StockVolatilityWeb/venv/bin/python3.11
+#!/Users/spencer-campbell/Desktop/StockVolatilityWeb/venv/bin/python3.13
 # -*- coding: utf-8 -*-
 import re
 import sys
