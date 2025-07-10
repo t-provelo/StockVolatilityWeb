@@ -1,253 +1,204 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Stock Volatility Analyzer</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock Volatility Analyzer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .chart-container {
+      position: relative;
+      margin: auto;
+      height: 400px;
+      width: 80%;
+    }
+    @media (max-width: 640px) {
       .chart-container {
-        position: relative;
-        margin: auto;
-        height: 400px;
-        width: 80%;
+        width: 100%;
+        height: 300px;
       }
-      @media (max-width: 640px) {
-        .chart-container {
-          width: 100%;
-          height: 300px;
-        }
-      }
-    </style>
-  </head>
-  <body class="bg-gray-100 p-4">
-    <div
-      class="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md md:max-w-4xl"
-    >
-      <h1 class="text-2xl font-bold mb-4">Stock Volatility Analyzer</h1>
-      <div
-        class="flex flex-col space-y-2 mb-4 md:flex-row md:space-x-2 md:space-y-0"
-      >
-        <button id="homeBtn" class="bg-blue-500 text-white px-4 py-2 rounded">
-          Home
-        </button>
-        <button id="prevBtn" class="bg-gray-500 text-white px-4 py-2 rounded">
-          ←
-        </button>
-        <button id="nextBtn" class="bg-gray-500 text-white px-4 py-2 rounded">
-          →
-        </button>
-        <input
-          id="stockInput"
-          type="text"
-          placeholder="Enter stock ticker (e.g., AAPL)"
-          class="border p-2 rounded flex-grow"
-        />
-        <select id="timeRange" class="border p-2 rounded md:w-32">
-          <option value="30">30 Days</option>
-          <option value="90">90 Days</option>
-          <option value="365">365 Days</option>
-        </select>
-        <button
-          id="searchBtn"
-          class="bg-green-500 text-white px-4 py-2 rounded"
-        >
-          Search
-        </button>
-        <button id="saveBtn" class="bg-yellow-500 text-white px-4 py-2 rounded">
-          Save
-        </button>
-      </div>
-      <div class="chart-container">
-        <canvas id="volatilityChart"></canvas>
-      </div>
-      <div id="forecastContainer" class="chart-container mt-4">
-        <canvas id="forecastChart"></canvas>
-      </div>
-      <p id="status" class="mt-2 text-red-500"></p>
+    }
+  </style>
+</head>
+<body class="bg-gray-100 p-4">
+  <!-- Unique Marker: 2025-07-09 Save Test V2 -->
+  <div class="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md md:max-w-4xl">
+    <h1 class="text-2xl font-bold mb-4">Stock Volatility Analyzer</h1>
+    <div class="flex flex-col space-y-2 mb-4 md:flex-row md:space-x-2 md:space-y-0">
+      <button id="homeBtn" class="bg-blue-500 text-white px-4 py-2 rounded">Home</button>
+      <button id="prevBtn" class="bg-gray-500 text-white px-4 py-2 rounded">←</button>
+      <button id="nextBtn" class="bg-gray-500 text-white px-4 py-2 rounded">→</button>
+      <input id="stockInput" type="text" placeholder="Enter stock ticker (e.g., AAPL)" class="border p-2 rounded flex-grow">
+      <select id="timeRange" class="border p-2 rounded md:w-32">
+        <option value="30">30 Days</option>
+        <option value="90">90 Days</option>
+        <option value="365">365 Days</option>
+      </select>
+      <button id="searchBtn" class="bg-green-500 text-white px-4 py-2 rounded">Search</button>
+      <button id="saveBtn" class="bg-yellow-500 text-white px-4 py-2 rounded">Save</button>
     </div>
+    <div class="chart-container">
+      <canvas id="volatilityChart"></canvas>
+    </div>
+    <div id="forecastContainer" class="chart-container mt-4">
+      <canvas id="forecastChart"></canvas>
+    </div>
+    <p id="status" class="mt-2 text-red-500"></p>
+  </div>
 
-    <script>
-      let currentStock = "AAPL";
-      const ctx = document.getElementById("volatilityChart").getContext("2d");
-      const forecastCtx = document
-        .getElementById("forecastChart")
-        .getContext("2d");
-      let volatilityChart, forecastChart;
+  <script>
+    let currentStock = 'AAPL';
+    const ctx = document.getElementById('volatilityChart').getContext('2d');
+    const forecastCtx = document.getElementById('forecastChart').getContext('2d');
+    let volatilityChart, forecastChart;
 
-      function fetchStockData(ticker, days) {
-        console.log(`Attempting to fetch ${ticker} for ${days} days`);
-        document.getElementById("status").textContent = "Loading...";
-        const url = `http://127.0.0.1:5000/stock/${ticker}?days=${days}`;
-        console.log(`Fetch URL: ${url}`);
-        return fetch(url)
-          .then((response) => {
-            if (!response.ok) {
-              console.log(
-                "Response status:",
-                response.status,
-                response.statusText
-              );
-              throw new Error(`Stock data unavailable: ${response.statusText}`);
-            }
-            return response.json();
-          })
-          .then((data) => {
-            console.log("Received data:", data);
-            document.getElementById("status").textContent = "";
-            if (volatilityChart) volatilityChart.destroy();
-            if (forecastChart) forecastChart.destroy();
+    function fetchStockData(ticker, days) {
+      console.log(`Attempting to fetch ${ticker} for ${days} days`);
+      document.getElementById('status').textContent = 'Loading...';
+      const url = `http://127.0.0.1:5000/stock/${ticker}?days=${days}`;
+      console.log(`Fetch URL: ${url}`);
+      return fetch(url)
+        .then(response => {
+          if (!response.ok) {
+            console.log('Response status:', response.status, response.statusText);
+            throw new Error(`Stock data unavailable: ${response.statusText}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log('Received data:', data);
+          document.getElementById('status').textContent = '';
+          if (volatilityChart) volatilityChart.destroy();
+          if (forecastChart) forecastChart.destroy();
 
-            if (
-              !data.dates ||
-              !data.returns ||
-              !data.volatility ||
-              data.dates.length !== data.returns.length ||
-              data.dates.length !== data.volatility.length
-            ) {
-              console.error("Data mismatch or missing:", {
-                dates: data.dates ? data.dates.length : "undefined",
-                returns: data.returns ? data.returns.length : "undefined",
-                volatility: data.volatility
-                  ? data.volatility.length
-                  : "undefined",
-              });
-              document.getElementById("status").textContent =
-                "Data error: Check console for details.";
-              return;
-            }
-
-            volatilityChart = new Chart(ctx, {
-              type: "line",
-              data: {
-                labels: data.dates,
-                datasets: [
-                  {
-                    label: `${ticker} Returns (%)`,
-                    data: data.returns,
-                    borderColor: "#0000FF",
-                    fill: false,
-                    pointRadius: 2,
-                    tension: 0.1,
-                  },
-                  {
-                    label: `${ticker} Volatility`,
-                    data: data.volatility,
-                    borderColor: "red",
-                    fill: false,
-                    pointRadius: 2,
-                  },
-                ],
-              },
-              options: {
-                responsive: true,
-                scales: {
-                  x: {
-                    title: { display: true, text: "Date" },
-                    ticks: { maxTicksLimit: 12 },
-                  },
-                  y: {
-                    beginAtZero: true,
-                    title: { display: true, text: "Percentage (%)" },
-                  },
-                },
-                plugins: {
-                  legend: { position: "top" },
-                  tooltip: { mode: "index", intersect: false },
-                },
-              },
+          if (!data.dates || !data.returns || !data.volatility || 
+              data.dates.length !== data.returns.length || 
+              data.dates.length !== data.volatility.length) {
+            console.error('Data mismatch or missing:', {
+              dates: data.dates ? data.dates.length : 'undefined',
+              returns: data.returns ? data.returns.length : 'undefined',
+              volatility: data.volatility ? data.volatility.length : 'undefined'
             });
+            document.getElementById('status').textContent = 'Data error: Check console for details.';
+            return;
+          }
 
-            forecastChart = new Chart(forecastCtx, {
-              type: "line",
-              data: {
-                labels: data.forecast_dates,
-                datasets: [
-                  {
-                    label: `${ticker} Forecasted Volatility`,
-                    data: data.forecast_values,
-                    borderColor: "green",
-                    fill: false,
-                    pointRadius: 2,
-                  },
-                ],
-              },
-              options: {
-                responsive: true,
-                scales: {
-                  x: {
-                    title: { display: true, text: "Date" },
-                    ticks: { maxTicksLimit: 5 },
-                  },
-                  y: {
-                    beginAtZero: true,
-                    title: { display: true, text: "Percentage (%)" },
-                  },
+          volatilityChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: data.dates,
+              datasets: [
+                { 
+                  label: `${ticker} Returns (%)`, 
+                  data: data.returns, 
+                  borderColor: '#0000FF', 
+                  fill: false,
+                  pointRadius: 2,
+                  tension: 0.1
                 },
-                plugins: {
-                  legend: { position: "top" },
-                  tooltip: { mode: "index", intersect: false },
+                { 
+                  label: `${ticker} Volatility`, 
+                  data: data.volatility, 
+                  borderColor: 'red', 
+                  fill: false,
+                  pointRadius: 2
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              scales: {
+                x: {
+                  title: { display: true, text: 'Date' },
+                  ticks: { maxTicksLimit: 12 }
                 },
+                y: { 
+                  beginAtZero: true, 
+                  title: { display: true, text: 'Percentage (%)' } 
+                }
               },
-            });
-            currentStock = ticker;
-          })
-          .catch((error) => {
-            console.error("Fetch error:", error);
-            document.getElementById(
-              "status"
-            ).textContent = `Error: ${error.message}`;
-            if (volatilityChart) volatilityChart.destroy();
-            if (forecastChart) forecastChart.destroy();
+              plugins: {
+                legend: { position: 'top' },
+                tooltip: { mode: 'index', intersect: false }
+              }
+            }
           });
+
+          forecastChart = new Chart(forecastCtx, {
+            type: 'line',
+            data: {
+              labels: data.forecast_dates,
+              datasets: [{ 
+                label: `${ticker} Forecasted Volatility`, 
+                data: data.forecast_values, 
+                borderColor: 'green', 
+                fill: false,
+                pointRadius: 2
+              }]
+            },
+            options: {
+              responsive: true,
+              scales: {
+                x: {
+                  title: { display: true, text: 'Date' },
+                  ticks: { maxTicksLimit: 5 }
+                },
+                y: { 
+                  beginAtZero: true, 
+                  title: { display: true, text: 'Percentage (%)' } 
+                }
+              },
+              plugins: {
+                legend: { position: 'top' },
+                tooltip: { mode: 'index', intersect: false }
+              }
+            }
+          });
+          currentStock = ticker;
+        })
+        .catch(error => {
+          console.error('Fetch error:', error);
+          document.getElementById('status').textContent = `Error: ${error.message}`;
+          if (volatilityChart) volatilityChart.destroy();
+          if (forecastChart) forecastChart.destroy();
+        });
+    }
+
+    // Event listeners
+    document.getElementById('homeBtn').addEventListener('click', () => {
+      const days = document.getElementById('timeRange').value;
+      console.log(`Home button clicked, fetching AAPL for ${days} days`);
+      fetchStockData('AAPL', parseInt(days));
+    });
+    document.getElementById('prevBtn').addEventListener('click', () => console.log('Previous stock - implement stock list cycling'));
+    document.getElementById('nextBtn').addEventListener('click', () => console.log('Next stock - implement stock list cycling'));
+    document.getElementById('searchBtn').addEventListener('click', () => {
+      const ticker = document.getElementById('stockInput').value.toUpperCase().trim();
+      const days = document.getElementById('timeRange').value;
+      console.log(`Search button clicked for ${ticker} with ${days} days`);
+      if (ticker) fetchStockData(ticker, parseInt(days));
+    });
+    document.getElementById('saveBtn').addEventListener('click', () => {
+      console.log('Save button clicked');
+      if (volatilityChart) {
+        const link = document.createElement('a');
+        link.download = `${currentStock}_volatility.png`;
+        link.href = volatilityChart.toBase64Image();
+        link.click();
+        console.log('Image saved:', link.download);
+      } else {
+        document.getElementById('status').textContent = 'No chart to save.';
       }
+    });
 
-      // Event listeners
-      document.getElementById("homeBtn").addEventListener("click", () => {
-        const days = document.getElementById("timeRange").value;
-        console.log(`Home button clicked, fetching AAPL for ${days} days`);
-        fetchStockData("AAPL", parseInt(days));
-      });
-      document
-        .getElementById("prevBtn")
-        .addEventListener("click", () =>
-          console.log("Previous stock - implement stock list cycling")
-        );
-      document
-        .getElementById("nextBtn")
-        .addEventListener("click", () =>
-          console.log("Next stock - implement stock list cycling")
-        );
-      document.getElementById("searchBtn").addEventListener("click", () => {
-        const ticker = document
-          .getElementById("stockInput")
-          .value.toUpperCase()
-          .trim();
-        const days = document.getElementById("timeRange").value;
-        console.log(`Search button clicked for ${ticker} with ${days} days`);
-        if (ticker) fetchStockData(ticker, parseInt(days));
-      });
-      document.getElementById("saveBtn").addEventListener("click", () => {
-        console.log("Save button clicked");
-        if (volatilityChart) {
-          const link = document.createElement("a");
-          link.download = `${currentStock}_volatility.png`;
-          link.href = volatilityChart.toBase64Image();
-          link.click();
-          console.log("Image saved:", link.download);
-        } else {
-          document.getElementById("status").textContent = "No chart to save.";
-        }
-      });
-
-      // Initial load
-      window.onload = () => {
-        console.log("Page loaded, fetching initial stock:", currentStock);
-        const days = document.getElementById("timeRange").value;
-        console.log(`Initial load using ${days} days`);
-        fetchStockData(currentStock, parseInt(days));
-      };
-    </script>
-  </body>
+    // Initial load
+    window.onload = () => {
+      console.log('Page loaded, fetching initial stock:', currentStock);
+      const days = document.getElementById('timeRange').value;
+      console.log(`Initial load using ${days} days`);
+      fetchStockData(currentStock, parseInt(days));
+    };
+  </script>
+</body>
 </html>
