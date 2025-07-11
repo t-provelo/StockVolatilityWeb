@@ -22,17 +22,17 @@
   </style>
 </head>
 <body class="bg-gray-100 p-4">
-  <!-- Unique Marker: 2025-07-09 Save Test V2 -->
+  <!-- Unique Marker: 2025-07-11 Debug Test -->
   <div class="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md md:max-w-4xl">
     <h1 class="text-2xl font-bold mb-4">Stock Volatility Analyzer</h1>
     <div class="flex flex-col space-y-2 mb-4 md:flex-row md:space-x-2 md:space-y-0">
       <button id="homeBtn" class="bg-blue-500 text-white px-4 py-2 rounded">Home</button>
       <button id="prevBtn" class="bg-gray-500 text-white px-4 py-2 rounded">←</button>
       <button id="nextBtn" class="bg-gray-500 text-white px-4 py-2 rounded">→</button>
-      <input id="stockInput" type="text" placeholder="Enter stock ticker (e.g., AAPL)" class="border p-2 rounded flex-grow">
+      <input id="stockInput" type="text" placeholder="Enter stock ticker (e.g., TSLA)" class="border p-2 rounded flex-grow">
       <select id="timeRange" class="border p-2 rounded md:w-32">
         <option value="30">30 Days</option>
-        <option value="90">90 Days</option>
+        <option value="90" selected>90 Days</option>
         <option value="365">365 Days</option>
       </select>
       <button id="searchBtn" class="bg-green-500 text-white px-4 py-2 rounded">Search</button>
@@ -48,26 +48,26 @@
   </div>
 
   <script>
-    let currentStock = 'AAPL';
+    let currentStock = 'TSLA';
     const ctx = document.getElementById('volatilityChart').getContext('2d');
     const forecastCtx = document.getElementById('forecastChart').getContext('2d');
     let volatilityChart, forecastChart;
 
     function fetchStockData(ticker, days) {
-      console.log(`Attempting to fetch ${ticker} for ${days} days`);
+      console.log(`[fetchStockData] Attempting to fetch ${ticker} for ${days} days`);
       document.getElementById('status').textContent = 'Loading...';
       const url = `http://127.0.0.1:5000/stock/${ticker}?days=${days}`;
-      console.log(`Fetch URL: ${url}`);
+      console.log(`[fetchStockData] Fetch URL: ${url}`);
       return fetch(url)
         .then(response => {
           if (!response.ok) {
-            console.log('Response status:', response.status, response.statusText);
+            console.error(`[fetchStockData] Response error: ${response.status} ${response.statusText}`);
             throw new Error(`Stock data unavailable: ${response.statusText}`);
           }
           return response.json();
         })
         .then(data => {
-          console.log('Received data:', data);
+          console.log(`[fetchStockData] Received data:`, data);
           document.getElementById('status').textContent = '';
           if (volatilityChart) volatilityChart.destroy();
           if (forecastChart) forecastChart.destroy();
@@ -75,7 +75,7 @@
           if (!data.dates || !data.returns || !data.volatility || 
               data.dates.length !== data.returns.length || 
               data.dates.length !== data.volatility.length) {
-            console.error('Data mismatch or missing:', {
+            console.error('[fetchStockData] Data mismatch or missing:', {
               dates: data.dates ? data.dates.length : 'undefined',
               returns: data.returns ? data.returns.length : 'undefined',
               volatility: data.volatility ? data.volatility.length : 'undefined'
@@ -158,7 +158,7 @@
           currentStock = ticker;
         })
         .catch(error => {
-          console.error('Fetch error:', error);
+          console.error('[fetchStockData] Fetch error:', error);
           document.getElementById('status').textContent = `Error: ${error.message}`;
           if (volatilityChart) volatilityChart.destroy();
           if (forecastChart) forecastChart.destroy();
@@ -168,25 +168,41 @@
     // Event listeners
     document.getElementById('homeBtn').addEventListener('click', () => {
       const days = document.getElementById('timeRange').value;
-      console.log(`Home button clicked, fetching AAPL for ${days} days`);
+      console.log(`[homeBtn] Fetching AAPL for ${days} days`);
       fetchStockData('AAPL', parseInt(days));
     });
-    document.getElementById('prevBtn').addEventListener('click', () => console.log('Previous stock - implement stock list cycling'));
-    document.getElementById('nextBtn').addEventListener('click', () => console.log('Next stock - implement stock list cycling'));
+
+    document.getElementById('timeRange').addEventListener('change', () => {
+      const days = document.getElementById('timeRange').value;
+      console.log(`[timeRange] Changed to ${days} days, fetching ${currentStock}`);
+      if (currentStock) {
+        fetchStockData(currentStock, parseInt(days));
+      } else {
+        console.warn('[timeRange] No current stock set');
+      }
+    });
+
+    document.getElementById('prevBtn').addEventListener('click', () => console.log('[prevBtn] Previous stock - implement stock list cycling'));
+    document.getElementById('nextBtn').addEventListener('click', () => console.log('[nextBtn] Next stock - implement stock list cycling'));
     document.getElementById('searchBtn').addEventListener('click', () => {
       const ticker = document.getElementById('stockInput').value.toUpperCase().trim();
       const days = document.getElementById('timeRange').value;
-      console.log(`Search button clicked for ${ticker} with ${days} days`);
-      if (ticker) fetchStockData(ticker, parseInt(days));
+      console.log(`[searchBtn] Searching for ${ticker} with ${days} days`);
+      if (ticker) {
+        currentStock = ticker;
+        fetchStockData(ticker, parseInt(days));
+      } else {
+        console.warn('[searchBtn] No ticker entered');
+      }
     });
     document.getElementById('saveBtn').addEventListener('click', () => {
-      console.log('Save button clicked');
+      console.log('[saveBtn] Save button clicked');
       if (volatilityChart) {
         const link = document.createElement('a');
         link.download = `${currentStock}_volatility.png`;
         link.href = volatilityChart.toBase64Image();
         link.click();
-        console.log('Image saved:', link.download);
+        console.log('[saveBtn] Image saved:', link.download);
       } else {
         document.getElementById('status').textContent = 'No chart to save.';
       }
@@ -194,9 +210,9 @@
 
     // Initial load
     window.onload = () => {
-      console.log('Page loaded, fetching initial stock:', currentStock);
+      console.log('[onload] Page loaded, fetching initial stock:', currentStock);
       const days = document.getElementById('timeRange').value;
-      console.log(`Initial load using ${days} days`);
+      console.log('[onload] Initial load using', days, 'days');
       fetchStockData(currentStock, parseInt(days));
     };
   </script>
