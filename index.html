@@ -19,32 +19,47 @@
         height: 300px;
       }
     }
+    body {
+      background-color: #1a1a1a;
+      color: #e0e0e0;
+    }
+    .cool-button {
+      transition: all 0.3s ease;
+    }
+    .cool-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0, 255, 255, 0.4);
+    }
+    canvas {
+      background-color: #2d2d2d;
+      border-radius: 8px;
+    }
   </style>
 </head>
-<body class="bg-gray-100 p-4">
-  <!-- Unique Marker: 2025-07-11 Debug Test -->
-  <div class="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md md:max-w-4xl">
-    <h1 class="text-2xl font-bold mb-4">Stock Volatility Analyzer</h1>
-    <div class="flex flex-col space-y-2 mb-4 md:flex-row md:space-x-2 md:space-y-0">
-      <button id="homeBtn" class="bg-blue-500 text-white px-4 py-2 rounded">Home</button>
-      <button id="prevBtn" class="bg-gray-500 text-white px-4 py-2 rounded">←</button>
-      <button id="nextBtn" class="bg-gray-500 text-white px-4 py-2 rounded">→</button>
-      <input id="stockInput" type="text" placeholder="Enter stock ticker (e.g., TSLA)" class="border p-2 rounded flex-grow">
-      <select id="timeRange" class="border p-2 rounded md:w-32">
+<body class="bg-gray-900 text-white p-4">
+  <!-- Unique Marker: 2025-07-14 Dark Theme -->
+  <div class="max-w-2xl mx-auto bg-gray-800 p-6 rounded-lg shadow-lg md:max-w-4xl">
+    <h1 class="text-3xl font-bold mb-6 text-cyan-400">Stock Volatility Analyzer</h1>
+    <div class="flex flex-col space-y-3 mb-6 md:flex-row md:space-x-3 md:space-y-0">
+      <button id="homeBtn" class="bg-blue-700 cool-button text-white px-4 py-2 rounded-lg">Home</button>
+      <button id="prevBtn" class="bg-gray-700 cool-button text-white px-4 py-2 rounded-lg">←</button>
+      <button id="nextBtn" class="bg-gray-700 cool-button text-white px-4 py-2 rounded-lg">→</button>
+      <input id="stockInput" type="text" placeholder="Enter stock ticker (e.g., TSLA)" class="bg-gray-700 border-gray-600 text-white placeholder-gray-400 p-2 rounded-lg flex-grow">
+      <select id="timeRange" class="bg-gray-700 border-gray-600 text-white p-2 rounded-lg md:w-32">
         <option value="30">30 Days</option>
         <option value="90" selected>90 Days</option>
         <option value="365">365 Days</option>
       </select>
-      <button id="searchBtn" class="bg-green-500 text-white px-4 py-2 rounded">Search</button>
-      <button id="saveBtn" class="bg-yellow-500 text-white px-4 py-2 rounded">Save</button>
+      <button id="searchBtn" class="bg-green-700 cool-button text-white px-4 py-2 rounded-lg">Search</button>
+      <button id="saveBtn" class="bg-yellow-700 cool-button text-white px-4 py-2 rounded-lg">Save</button>
     </div>
     <div class="chart-container">
       <canvas id="volatilityChart"></canvas>
     </div>
-    <div id="forecastContainer" class="chart-container mt-4">
+    <div id="forecastContainer" class="chart-container mt-6">
       <canvas id="forecastChart"></canvas>
     </div>
-    <p id="status" class="mt-2 text-red-500"></p>
+    <p id="status" class="mt-4 text-red-400"></p>
   </div>
 
   <script>
@@ -84,6 +99,14 @@
             return;
           }
 
+          // Validate and log returns data
+          console.log(`[fetchStockData] Returns data sample:`, data.returns.slice(0, 5));
+          if (data.returns.some(r => isNaN(r))) {
+            console.error('[fetchStockData] Invalid returns value detected');
+            document.getElementById('status').textContent = 'Invalid returns data.';
+            return;
+          }
+
           volatilityChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -92,7 +115,7 @@
                 { 
                   label: `${ticker} Returns (%)`, 
                   data: data.returns, 
-                  borderColor: '#0000FF', 
+                  borderColor: '#00ffcc', 
                   fill: false,
                   pointRadius: 2,
                   tension: 0.1
@@ -100,7 +123,7 @@
                 { 
                   label: `${ticker} Volatility`, 
                   data: data.volatility, 
-                  borderColor: 'red', 
+                  borderColor: '#ff4444', 
                   fill: false,
                   pointRadius: 2
                 }
@@ -111,16 +134,19 @@
               scales: {
                 x: {
                   title: { display: true, text: 'Date' },
-                  ticks: { maxTicksLimit: 12 }
+                  ticks: { maxTicksLimit: 12, color: '#e0e0e0' }
                 },
                 y: { 
                   beginAtZero: true, 
-                  title: { display: true, text: 'Percentage (%)' } 
+                  title: { display: true, text: 'Percentage (%)', color: '#e0e0e0' },
+                  suggestedMin: -5,
+                  suggestedMax: 5,
+                  ticks: { color: '#e0e0e0' }
                 }
               },
               plugins: {
-                legend: { position: 'top' },
-                tooltip: { mode: 'index', intersect: false }
+                legend: { position: 'top', labels: { color: '#e0e0e0' } },
+                tooltip: { mode: 'index', intersect: false, backgroundColor: '#2d2d2d', titleColor: '#e0e0e0', bodyColor: '#e0e0e0' }
               }
             }
           });
@@ -132,7 +158,7 @@
               datasets: [{ 
                 label: `${ticker} Forecasted Volatility`, 
                 data: data.forecast_values, 
-                borderColor: 'green', 
+                borderColor: '#00ccff', 
                 fill: false,
                 pointRadius: 2
               }]
@@ -141,17 +167,18 @@
               responsive: true,
               scales: {
                 x: {
-                  title: { display: true, text: 'Date' },
-                  ticks: { maxTicksLimit: 5 }
+                  title: { display: true, text: 'Date', color: '#e0e0e0' },
+                  ticks: { maxTicksLimit: 5, color: '#e0e0e0' }
                 },
                 y: { 
                   beginAtZero: true, 
-                  title: { display: true, text: 'Percentage (%)' } 
+                  title: { display: true, text: 'Percentage (%)', color: '#e0e0e0' },
+                  ticks: { color: '#e0e0e0' }
                 }
               },
               plugins: {
-                legend: { position: 'top' },
-                tooltip: { mode: 'index', intersect: false }
+                legend: { position: 'top', labels: { color: '#e0e0e0' } },
+                tooltip: { mode: 'index', intersect: false, backgroundColor: '#2d2d2d', titleColor: '#e0e0e0', bodyColor: '#e0e0e0' }
               }
             }
           });
