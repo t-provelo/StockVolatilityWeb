@@ -19,70 +19,54 @@
         height: 300px;
       }
     }
-    body {
-      background-color: #1a1a1a;
-      color: #e0e0e0;
-    }
-    .cool-button {
-      transition: all 0.3s ease;
-    }
-    .cool-button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 15px rgba(0, 255, 255, 0.4);
-    }
-    canvas {
-      background-color: #2d2d2d;
-      border-radius: 8px;
-    }
   </style>
 </head>
-<body class="bg-gray-900 text-white p-4">
-  <!-- Unique Marker: 2025-07-14 Dark Theme -->
-  <div class="max-w-2xl mx-auto bg-gray-800 p-6 rounded-lg shadow-lg md:max-w-4xl">
-    <h1 class="text-3xl font-bold mb-6 text-cyan-400">Stock Volatility Analyzer</h1>
-    <div class="flex flex-col space-y-3 mb-6 md:flex-row md:space-x-3 md:space-y-0">
-      <button id="homeBtn" class="bg-blue-700 cool-button text-white px-4 py-2 rounded-lg">Home</button>
-      <button id="prevBtn" class="bg-gray-700 cool-button text-white px-4 py-2 rounded-lg">←</button>
-      <button id="nextBtn" class="bg-gray-700 cool-button text-white px-4 py-2 rounded-lg">→</button>
-      <input id="stockInput" type="text" placeholder="Enter stock ticker (e.g., TSLA)" class="bg-gray-700 border-gray-600 text-white placeholder-gray-400 p-2 rounded-lg flex-grow">
-      <select id="timeRange" class="bg-gray-700 border-gray-600 text-white p-2 rounded-lg md:w-32">
+<body class="bg-gray-100 p-4">
+  <div class="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md md:max-w-4xl">
+    <h1 class="text-2xl font-bold mb-4">Stock Volatility Analyzer</h1>
+    <div class="flex flex-col space-y-2 mb-4 md:flex-row md:space-x-2 md:space-y-0">
+      <button id="homeBtn" class="bg-blue-500 text-white px-4 py-2 rounded">Home</button>
+      <button id="prevBtn" class="bg-gray-500 text-white px-4 py-2 rounded">←</button>
+      <button id="nextBtn" class="bg-gray-500 text-white px-4 py-2 rounded">→</button>
+      <input id="stockInput" type="text" placeholder="Enter stock ticker (e.g., AAPL)" class="border p-2 rounded flex-grow">
+      <select id="timeRange" class="border p-2 rounded md:w-32">
         <option value="30">30 Days</option>
-        <option value="90" selected>90 Days</option>
+        <option value="90">90 Days</option>
         <option value="365">365 Days</option>
       </select>
-      <button id="searchBtn" class="bg-green-700 cool-button text-white px-4 py-2 rounded-lg">Search</button>
-      <button id="saveBtn" class="bg-yellow-700 cool-button text-white px-4 py-2 rounded-lg">Save</button>
+      <button id="searchBtn" class="bg-green-500 text-white px-4 py-2 rounded">Search</button>
+      <button id="saveBtn" class="bg-yellow-500 text-white px-4 py-2 rounded">Save</button>
     </div>
     <div class="chart-container">
       <canvas id="volatilityChart"></canvas>
     </div>
-    <div id="forecastContainer" class="chart-container mt-6">
+    <div id="forecastContainer" class="chart-container mt-4">
       <canvas id="forecastChart"></canvas>
     </div>
-    <p id="status" class="mt-4 text-red-400"></p>
+    <p id="status" class="mt-2 text-red-500"></p>
   </div>
 
   <script>
-    let currentStock = 'TSLA';
+    let currentStock = 'AAPL';
     const ctx = document.getElementById('volatilityChart').getContext('2d');
     const forecastCtx = document.getElementById('forecastChart').getContext('2d');
     let volatilityChart, forecastChart;
 
-    function fetchStockData(ticker, days) {
-      console.log(`[fetchStockData] Attempting to fetch ${ticker} for ${days} days`);
+    function fetchStockData(ticker, days = 365) {
+      console.log(`Attempting to fetch ${ticker} for ${days} days`);
       document.getElementById('status').textContent = 'Loading...';
       const url = `http://127.0.0.1:5000/stock/${ticker}?days=${days}`;
-      console.log(`[fetchStockData] Fetch URL: ${url}`);
+      console.log(`Fetch URL: ${url}`);
       return fetch(url)
         .then(response => {
           if (!response.ok) {
-            console.error(`[fetchStockData] Response error: ${response.status} ${response.statusText}`);
+            console.log('Response status:', response.status, response.statusText);
             throw new Error(`Stock data unavailable: ${response.statusText}`);
           }
           return response.json();
         })
         .then(data => {
-          console.log(`[fetchStockData] Received data:`, data);
+          console.log('Received data:', data);
           document.getElementById('status').textContent = '';
           if (volatilityChart) volatilityChart.destroy();
           if (forecastChart) forecastChart.destroy();
@@ -90,20 +74,13 @@
           if (!data.dates || !data.returns || !data.volatility || 
               data.dates.length !== data.returns.length || 
               data.dates.length !== data.volatility.length) {
-            console.error('[fetchStockData] Data mismatch or missing:', {
-              dates: data.dates ? data.dates.length : 'undefined',
-              returns: data.returns ? data.returns.length : 'undefined',
-              volatility: data.volatility ? data.volatility.length : 'undefined'
+            console.error('Data mismatch or missing:', {
+              datesLength: data.dates ? data.dates.length : 'undefined',
+              returnsLength: data.returns ? data.returns.length : 'undefined',
+              volatilityLength: data.volatility ? data.volatility.length : 'undefined',
+              sampleReturns: data.returns ? data.returns.slice(0, 5) : 'none'
             });
             document.getElementById('status').textContent = 'Data error: Check console for details.';
-            return;
-          }
-
-          // Validate and log returns data
-          console.log(`[fetchStockData] Returns data sample:`, data.returns.slice(0, 5));
-          if (data.returns.some(r => isNaN(r))) {
-            console.error('[fetchStockData] Invalid returns value detected');
-            document.getElementById('status').textContent = 'Invalid returns data.';
             return;
           }
 
@@ -115,17 +92,19 @@
                 { 
                   label: `${ticker} Returns (%)`, 
                   data: data.returns, 
-                  borderColor: '#00ffcc', 
+                  borderColor: '#0000FF', 
                   fill: false,
-                  pointRadius: 2,
-                  tension: 0.1
+                  pointRadius: 3, // Increased for visibility
+                  tension: 0.1,
+                  borderWidth: 2 // Thicker line
                 },
                 { 
                   label: `${ticker} Volatility`, 
                   data: data.volatility, 
-                  borderColor: '#ff4444', 
+                  borderColor: 'red', 
                   fill: false,
-                  pointRadius: 2
+                  pointRadius: 3,
+                  borderWidth: 2
                 }
               ]
             },
@@ -134,19 +113,16 @@
               scales: {
                 x: {
                   title: { display: true, text: 'Date' },
-                  ticks: { maxTicksLimit: 12, color: '#e0e0e0' }
+                  ticks: { maxTicksLimit: 12 }
                 },
                 y: { 
                   beginAtZero: true, 
-                  title: { display: true, text: 'Percentage (%)', color: '#e0e0e0' },
-                  suggestedMin: -5,
-                  suggestedMax: 5,
-                  ticks: { color: '#e0e0e0' }
+                  title: { display: true, text: 'Percentage (%)' } 
                 }
               },
               plugins: {
-                legend: { position: 'top', labels: { color: '#e0e0e0' } },
-                tooltip: { mode: 'index', intersect: false, backgroundColor: '#2d2d2d', titleColor: '#e0e0e0', bodyColor: '#e0e0e0' }
+                legend: { position: 'top' },
+                tooltip: { mode: 'index', intersect: false }
               }
             }
           });
@@ -158,34 +134,34 @@
               datasets: [{ 
                 label: `${ticker} Forecasted Volatility`, 
                 data: data.forecast_values, 
-                borderColor: '#00ccff', 
+                borderColor: 'green', 
                 fill: false,
-                pointRadius: 2
+                pointRadius: 3,
+                borderWidth: 2
               }]
             },
             options: {
               responsive: true,
               scales: {
                 x: {
-                  title: { display: true, text: 'Date', color: '#e0e0e0' },
-                  ticks: { maxTicksLimit: 5, color: '#e0e0e0' }
+                  title: { display: true, text: 'Date' },
+                  ticks: { maxTicksLimit: 5 }
                 },
                 y: { 
                   beginAtZero: true, 
-                  title: { display: true, text: 'Percentage (%)', color: '#e0e0e0' },
-                  ticks: { color: '#e0e0e0' }
+                  title: { display: true, text: 'Percentage (%)' } 
                 }
               },
               plugins: {
-                legend: { position: 'top', labels: { color: '#e0e0e0' } },
-                tooltip: { mode: 'index', intersect: false, backgroundColor: '#2d2d2d', titleColor: '#e0e0e0', bodyColor: '#e0e0e0' }
+                legend: { position: 'top' },
+                tooltip: { mode: 'index', intersect: false }
               }
             }
           });
           currentStock = ticker;
         })
         .catch(error => {
-          console.error('[fetchStockData] Fetch error:', error);
+          console.error('Fetch error:', error);
           document.getElementById('status').textContent = `Error: ${error.message}`;
           if (volatilityChart) volatilityChart.destroy();
           if (forecastChart) forecastChart.destroy();
@@ -195,41 +171,23 @@
     // Event listeners
     document.getElementById('homeBtn').addEventListener('click', () => {
       const days = document.getElementById('timeRange').value;
-      console.log(`[homeBtn] Fetching AAPL for ${days} days`);
-      fetchStockData('AAPL', parseInt(days));
+      console.log(`Home button clicked, fetching AAPL for ${days} days`);
+      fetchStockData('AAPL', days);
     });
-
-    document.getElementById('timeRange').addEventListener('change', () => {
-      const days = document.getElementById('timeRange').value;
-      console.log(`[timeRange] Changed to ${days} days, fetching ${currentStock}`);
-      if (currentStock) {
-        fetchStockData(currentStock, parseInt(days));
-      } else {
-        console.warn('[timeRange] No current stock set');
-      }
-    });
-
-    document.getElementById('prevBtn').addEventListener('click', () => console.log('[prevBtn] Previous stock - implement stock list cycling'));
-    document.getElementById('nextBtn').addEventListener('click', () => console.log('[nextBtn] Next stock - implement stock list cycling'));
+    document.getElementById('prevBtn').addEventListener('click', () => console.log('Previous stock - implement stock list cycling'));
+    document.getElementById('nextBtn').addEventListener('click', () => console.log('Next stock - implement stock list cycling'));
     document.getElementById('searchBtn').addEventListener('click', () => {
       const ticker = document.getElementById('stockInput').value.toUpperCase().trim();
       const days = document.getElementById('timeRange').value;
-      console.log(`[searchBtn] Searching for ${ticker} with ${days} days`);
-      if (ticker) {
-        currentStock = ticker;
-        fetchStockData(ticker, parseInt(days));
-      } else {
-        console.warn('[searchBtn] No ticker entered');
-      }
+      console.log(`Search button clicked for ${ticker} with ${days} days`);
+      if (ticker) fetchStockData(ticker, days);
     });
     document.getElementById('saveBtn').addEventListener('click', () => {
-      console.log('[saveBtn] Save button clicked');
       if (volatilityChart) {
         const link = document.createElement('a');
         link.download = `${currentStock}_volatility.png`;
         link.href = volatilityChart.toBase64Image();
         link.click();
-        console.log('[saveBtn] Image saved:', link.download);
       } else {
         document.getElementById('status').textContent = 'No chart to save.';
       }
@@ -237,10 +195,10 @@
 
     // Initial load
     window.onload = () => {
-      console.log('[onload] Page loaded, fetching initial stock:', currentStock);
+      console.log('Page loaded, fetching initial stock:', currentStock);
       const days = document.getElementById('timeRange').value;
-      console.log('[onload] Initial load using', days, 'days');
-      fetchStockData(currentStock, parseInt(days));
+      console.log(`Initial load using ${days} days`);
+      fetchStockData(currentStock, days);
     };
   </script>
 </body>

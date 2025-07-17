@@ -8,14 +8,14 @@ import numpy as np
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
-cache = Cache(app, config={'CACHE_TYPE': 'simple', 'CACHE_DEFAULT_TIMEOUT': 300})  # Cache for 5 minutes
+CORS(app)
+cache = Cache(app, config={'CACHE_TYPE': 'simple', 'CACHE_DEFAULT_TIMEOUT': 300})
 
 @app.route('/stock/<ticker>')
-@cache.cached(timeout=300)  # Cache each ticker's data for 5 minutes
+@cache.cached(timeout=300)
 def get_stock_data(ticker):
     print(f"Received request for {ticker} at {datetime.now()}")
-    days = int(request.args.get('days', 365))  # Default to 365 days, adjustable via query param
+    days = int(request.args.get('days', 365))
     end_date = datetime.now().strftime('%Y-%m-%d')
     start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
     print(f"Fetching data from {start_date} to {end_date} for {days} days")
@@ -36,6 +36,11 @@ def get_stock_data(ticker):
         price_column = 'Close'
 
     returns = 100 * stock[price_column].pct_change().dropna()
+    print(f"Returns DataFrame/Series info: {returns.head()}")  # Debug returns data
+    if returns.empty:
+        print(f"Warning: No returns data calculated for {ticker}")
+        return jsonify({'error': f'No returns data for {ticker}'}), 500
+
     print(f"Returns calculated with {len(returns)} points")
 
     try:
@@ -48,7 +53,7 @@ def get_stock_data(ticker):
 
     dates = returns.index.astype(str).tolist()
     return_data = returns.to_numpy().tolist()
-    print(f"Returns data: {return_data[:5]}...")  # Debug
+    print(f"Returns data (first 5): {return_data[:5]}...")  # Debug final returns
     volatility = results.conditional_volatility.to_numpy().tolist()
     forecast = results.forecast(horizon=5).variance.dropna() ** 0.5
     forecast_dates = pd.date_range(start=dates[-1], periods=6, freq='B')[1:].astype(str).tolist()
